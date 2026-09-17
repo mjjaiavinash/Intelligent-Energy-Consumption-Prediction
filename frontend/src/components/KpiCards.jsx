@@ -3,13 +3,20 @@ import { Activity, Flame, TrendingUp, DollarSign, Clock, ShieldCheck } from 'luc
 
 export default function KpiCards({ summary, latestPrediction, latestOptimization, isLoading }) {
   // Use dynamically retrieved values
-  const avgConsumption = summary?.average_consumption !== undefined ? summary.average_consumption.toFixed(3) : '—';
-  const peakConsumption = summary?.peak_consumption !== undefined ? summary.peak_consumption.toFixed(3) : '—';
+  const avgConsumption = summary?.average_consumption !== undefined 
+    ? `${summary.average_consumption.toFixed(3)} kWh` 
+    : (isLoading ? 'Loading...' : 'N/A');
+    
+  const peakConsumption = summary?.peak_consumption !== undefined 
+    ? `${summary.peak_consumption.toFixed(3)} kWh` 
+    : (isLoading ? 'Loading...' : 'N/A');
   
   // Latest or predicted consumption
   const displayConsumption = latestPrediction?.predicted_energy_kwh !== undefined
-    ? latestPrediction.predicted_energy_kwh.toFixed(3)
-    : (summary?.latest_consumption !== undefined ? summary.latest_consumption.toFixed(3) : '—');
+    ? `${latestPrediction.predicted_energy_kwh.toFixed(3)} kWh`
+    : (summary?.latest_consumption !== undefined 
+        ? `${summary.latest_consumption.toFixed(3)} kWh` 
+        : (isLoading ? 'Loading...' : 'N/A'));
     
   const consumptionLabel = latestPrediction?.predicted_energy_kwh !== undefined
     ? 'Latest Predicted Consumption'
@@ -20,13 +27,15 @@ export default function KpiCards({ summary, latestPrediction, latestOptimization
     ? `${latestOptimization.potential_saving.toFixed(3)} kWh (${latestOptimization.saving_percentage}%)`
     : (summary?.average_potential_saving !== undefined && summary.average_potential_saving > 0
         ? `${summary.average_potential_saving.toFixed(3)} kWh`
-        : '0.000 kWh');
+        : (isLoading ? 'Loading...' : 'N/A'));
 
   const cards = [
     {
       title: 'Average Consumption',
-      value: `${avgConsumption} kWh`,
-      subtitle: `Across ${summary?.total_records?.toLocaleString() || '34,127'} records`,
+      value: avgConsumption,
+      subtitle: summary?.total_records 
+        ? `Across ${summary.total_records.toLocaleString()} records` 
+        : (isLoading ? 'Loading records...' : 'Dataset records: N/A'),
       icon: Activity,
       color: '#3b82f6',
       gradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.05))',
@@ -34,8 +43,10 @@ export default function KpiCards({ summary, latestPrediction, latestOptimization
     },
     {
       title: consumptionLabel,
-      value: `${displayConsumption} kWh`,
-      subtitle: latestPrediction?.model_name ? `Model: ${latestPrediction.model_name}` : `Recorded at ${summary?.latest_timestamp?.slice(0, 16) || 'latest'}`,
+      value: displayConsumption,
+      subtitle: latestPrediction?.model_name 
+        ? `Model: ${latestPrediction.model_name}` 
+        : (summary?.latest_timestamp ? `Recorded at ${summary.latest_timestamp.slice(0, 16)}` : 'Awaiting data'),
       icon: Clock,
       color: '#06b6d4',
       gradient: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(16, 185, 129, 0.05))',
@@ -43,7 +54,7 @@ export default function KpiCards({ summary, latestPrediction, latestOptimization
     },
     {
       title: 'Peak Consumption',
-      value: `${peakConsumption} kWh`,
+      value: peakConsumption,
       subtitle: 'Maximum recorded surge',
       icon: Flame,
       color: '#f43f5e',

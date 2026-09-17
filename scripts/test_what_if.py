@@ -37,6 +37,20 @@ except ImportError:
 
 API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000")
 
+_test_client = None
+
+def get_test_client():
+    global _test_client
+    if _test_client is None:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if base_dir not in sys.path:
+            sys.path.insert(0, base_dir)
+        from fastapi.testclient import TestClient
+        from api.main import app, load_artifacts
+        load_artifacts()
+        _test_client = TestClient(app)
+    return _test_client
+
 PASS = "PASS"
 FAIL = "FAIL"
 
@@ -58,10 +72,27 @@ def record(name, ok, detail=""):
         print(f"          -> {detail}")
 
 
+_use_live = None
+
+def check_live_server():
+    global _use_live
+    if _use_live is None:
+        try:
+            r = requests.get(f"{API_BASE}/health", timeout=0.5)
+            _use_live = (r.status_code == 200)
+        except Exception:
+            _use_live = False
+    return _use_live
+
 def post_what_if(payload):
-    """Helper: POST /what-if and return response object."""
-    resp = requests.post(f"{API_BASE}/what-if", json=payload, timeout=15)
-    return resp
+    """Helper: POST /what-if. Tries live server; falls back to FastAPI TestClient."""
+    if check_live_server():
+        try:
+            return requests.post(f"{API_BASE}/what-if", json=payload, timeout=5)
+        except Exception:
+            pass
+    client = get_test_client()
+    return client.post("/what-if", json=payload)
 
 
 # ---------------------------------------------------------------------------

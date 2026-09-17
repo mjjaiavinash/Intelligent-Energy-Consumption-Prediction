@@ -25,6 +25,10 @@ wheels/
 .installed.cfg
 *.egg
 .pytest_cache/
+.ipynb_checkpoints/
+
+# Logs
+*.log
 
 # Virtual Environments
 venv/
@@ -43,6 +47,7 @@ frontend/dist-ssr/
 frontend/*.local
 frontend/.vite/
 node_modules/
+dist/
 
 # IDE and OS files
 .vscode/

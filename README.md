@@ -1,421 +1,424 @@
 # Intelligent Energy Consumption Prediction and Optimization
-
-A comprehensive Machine Learning and API system for **next-hour household energy consumption forecasting** (`energy_consumption_kwh`) using historical consumption dynamics and temporal calendar features.
-
----
-
-## Project Overview
-
-- **Phase 1: ML Regression Pipeline**: Data validation, chronological splitting, multi-model benchmarking (Linear Regression, Random Forest, XGBoost), feature importance analysis, and model persistence.
-- **Phase 2: Prediction API**: High-performance FastAPI backend exposing the trained XGBoost model for next-hour predictions with Pydantic validation, strict feature alignment, and automated testing.
+> **College Machine Learning Subject Capstone Project**  
+> An end-to-end predictive machine learning platform for next-hour household electrical energy forecasting, data-driven peak shaving optimization, and What-If scenario analysis.
 
 ---
 
-## Genuine Next-Hour Forecasting Architecture
+## 1. Project Overview
 
-To avoid data leakage and ensure realistic production deployment:
-- **Included 8 Forecasting Features**:
-  - `hour`, `day`, `day_of_week`, `month`, `weekend` (Calendar context)
-  - `lag_1h_kwh` (Energy consumption in immediate preceding hour)
-  - `lag_24h_kwh` (Energy consumption at same hour on previous day)
-  - `rolling_mean_24h_kwh` (Moving average consumption over past 24 hours)
+Residential and commercial buildings consume a major portion of generated electrical energy. Because electricity cannot be easily or cheaply stored at scale in typical domestic environments, anticipating demand spikes before they occur is critical for both grid stability and consumer energy cost management.
 
-- **Excluded Same-Period Variables**:
-  - `avg_reactive_power`, `avg_voltage`, `avg_global_intensity`, `sub_metering_1`, `sub_metering_2`, `sub_metering_3`
-  - *Rationale*: Concurrent measurements are recorded during the predicted hour itself. Using them as forecast features would introduce artificial data leakage.
+This project delivers a complete, reproducible **Machine Learning regression methodology** for **next-hour energy consumption forecasting (`energy_consumption_kwh`)**. The system ingests multi-year smart-meter measurements, engineers calendar and auto-regressive lag dynamics while strictly preventing target leakage, evaluates multiple regression algorithms, selects the best-performing model (XGBoost), and connects predictions into downstream optimization and What-If simulation engines.
+
+```
+Real Energy Dataset (UCI)
+          ↓
+  Data Preprocessing (Hourly aggregation, timestamp validation)
+          ↓
+  Feature Engineering (Calendar dynamics + 1h/24h Lags + 24h Rolling Mean)
+          ↓
+  Exploratory Data Analysis (Diurnal cycles, seasonality, distribution)
+          ↓
+  Feature Selection & Leakage Prevention (Strict past-only inputs)
+          ↓
+  Train Multiple ML Models (Linear Regression, Random Forest, XGBoost)
+          ↓
+  Chronological Model Evaluation (MAE, MSE, RMSE, R²)
+          ↓
+  Model Comparison & Benchmarking
+          ↓
+  XGBoost Final Model Selection
+          ↓
+  Energy Consumption Prediction (FastAPI)
+          ↓
+  Data-Driven Optimization (MySQL Baseline vs Forecast)
+          ↓
+  What-If Scenario Simulation
+          ↓
+  Interactive Dashboard (React + Vite + Recharts)
+```
 
 ---
 
-## Project Directory Structure
+## 2. Problem Statement
+
+Electrical energy consumption is highly non-linear, stochastic, and volatile. It fluctuates based on human routines, work schedules, seasonal climate changes, and simultaneous appliance operation.
+
+Traditional static estimation methods fail to capture short-term demand surges. Predicting next-hour energy usage poses several key challenges:
+1. **Diurnal and Weekly Seasonality:** Energy consumption varies dramatically between daytime activity peaks and nighttime baselines, as well as between workdays and weekends.
+2. **Auto-regressive Dependencies:** Recent past consumption strongly influences near-future consumption (e.g., HVAC continuous running).
+3. **Prevention of Target Leakage:** Concurrent measurements recorded during the forecast hour itself cannot be used for forward forecasting because they are unavailable prior to the forecast interval.
+
+Solving this problem requires an intelligent, data-driven machine learning regression model that operates strictly on historical smart-meter telemetry.
+
+---
+
+## 3. Project Objectives
+
+- **Analyze Historical Energy Data:** Examine multi-year smart-meter observations from the UCI Individual Household Electric Power Consumption benchmark.
+- **Perform Data Preprocessing:** Clean, aggregate minute-level measurements into hourly energy values (kWh), and handle missing readings.
+- **Engineer Temporal & Auto-regressive Features:** Extract diurnal, weekly, and seasonal calendar signals alongside 1-hour lag, 24-hour lag, and 24-hour rolling averages.
+- **Conduct Exploratory Data Analysis (EDA):** Identify consumption patterns, distribution skewness, diurnal shapes, and feature correlations.
+- **Train Multiple Regression Algorithms:** Benchmarking Linear Regression, Random Forest Regressor, and XGBoost Regressor under identical experimental conditions.
+- **Validate Chronologically Without Shuffling:** Evaluate models using strict forward-in-time train/test splitting (80% train / 20% test).
+- **Compare Evaluation Metrics:** Quantify forecasting precision using MAE, MSE, RMSE, and $R^2$.
+- **Select the Optimal Model:** Objectively select the model with the lowest error and highest variance explanation.
+- **Deploy Predictive REST API:** Serve real-time inference via FastAPI with schema validation and CORS protection.
+- **Integrate Data-Driven Optimization:** Identify elevated and peak consumption against historical smart-meter baselines stored in MySQL.
+- **Provide What-If Scenario Analysis:** Enable interactive evaluation of hypothetical operational changes and efficiency shifts.
+
+---
+
+## 4. Dataset
+
+The project utilizes the **Individual Household Electric Power Consumption Dataset** from the UCI Machine Learning Repository:
+- **Raw Observations:** 2,075,259 minute-level electrical telemetry records.
+- **Temporal Span:** December 16, 2006 to November 26, 2010 (~47 months).
+- **Measurement Variables:** Global active power (kW), global reactive power (kW), voltage (V), global intensity (A), and sub-metering zones 1, 2, and 3 (Wh).
+- **Processed Hourly Dataset:** `dataset/processed/energy_consumption_ml_dataset.csv` contains **34,127 hourly records** with zero missing values.
+- **Target Variable:** `energy_consumption_kwh` (hourly energy consumption in kilowatt-hours).
+
+---
+
+## 5. Data Preprocessing
+
+Data preprocessing is automated in `src/preprocess.py`:
+1. **Datetime Parsing:** Combines `Date` and `Time` into high-resolution timestamps (`YYYY-MM-DD HH:MM:SS`).
+2. **Missing Value Handling:** Semicolon delimiter parsed; `'?'` characters coerced to numeric NaN.
+3. **Hourly Aggregation:** Minute-level active power (kW) is resampled to hourly means to produce energy in kilowatt-hours (kWh).
+4. **Data Validation:** Checks ensure timestamps are strictly monotonically increasing, missing values are zero, and measurements reside within physically valid boundaries.
+5. **Safe File Handling:** Includes automated comparison with the verified processed dataset before writing, preventing silent overwriting of model-aligned datasets.
+
+---
+
+## 6. Feature Engineering
+
+The forecasting engine utilizes strictly **8 machine learning features**:
+
+| Feature Name | Type | Domain / Range | Description & Physical Rationale |
+| :--- | :---: | :---: | :--- |
+| `hour` | Integer | $0 - 23$ | Diurnal human activity cycle (sleep, cooking, evening peaks). |
+| `day` | Integer | $1 - 31$ | Day of the month; reflects monthly billing cycles and routines. |
+| `day_of_week` | Integer | $0 - 6$ | Day index (Monday=0, Sunday=6); differentiates weekday vs. weekend patterns. |
+| `month` | Integer | $1 - 12$ | Annual seasonality (winter heating vs. summer baseline). |
+| `weekend` | Binary | $0 \text{ or } 1$ | Flag indicating Saturday/Sunday lifestyle and occupancy shifts. |
+| `lag_1h_kwh` | Float | $\ge 0$ kWh | Energy consumption of the immediate preceding hour ($t-1$). Captures auto-regressive momentum. |
+| `lag_24h_kwh` | Float | $\ge 0$ kWh | Energy consumption at the exact same hour yesterday ($t-24$). Captures circadian cycle periodicity. |
+| `rolling_mean_24h_kwh` | Float | $\ge 0$ kWh | Rolling mean of the preceding 24 hours (excluding forecast hour). Captures baseline consumption level. |
+
+### Strict Prevention of Target Leakage
+Concurrent electrical features (`avg_reactive_power`, `avg_voltage`, `avg_global_intensity`, `sub_metering_1`, `sub_metering_2`, `sub_metering_3`) are retained in the database for historical reporting, but are **strictly excluded** from ML model inputs. Because these quantities are recorded during the forecast hour itself, using them would introduce artificial data leakage and inflate test accuracy.
+
+---
+
+## 7. Exploratory Data Analysis (EDA)
+
+Key empirical insights discovered through exploratory analysis:
+- **Diurnal Curve:** Sharp morning peak (~7:00–9:00 AM) and pronounced evening peak (~6:00–9:00 PM), with lowest demand during overnight hours (~2:00–5:00 AM).
+- **Weekly Patterns:** Weekend consumption exhibits higher midday usage compared to weekdays, reflecting home occupancy.
+- **Seasonal Trend:** Winter months (December to February) display elevated consumption compared to summer months (June to August).
+- **Distribution:** Target consumption is positively skewed (mean $\approx 1.09$ kWh, median $\approx 0.77$ kWh, max $= 6.56$ kWh).
+- **Correlation:** `lag_1h_kwh` ($r \approx 0.75$) and `rolling_mean_24h_kwh` ($r \approx 0.61$) exhibit the strongest linear correlation with next-hour consumption.
+
+Visualization artifacts are saved in `plots/` and embedded in `notebooks/ML_Project_Complete_Analysis.ipynb`:
+- `plots/energy_consumption_over_time.png`
+- `plots/actual_vs_predicted.png`
+- `plots/model_performance_comparison.png`
+- `plots/feature_importance_xgboost.png`
+- `plots/feature_importance_random_forest.png`
+
+---
+
+## 8. Machine Learning Methodology
+
+### Chronological Train-Test Split (No Shuffling)
+For time-series forecasting, standard random shuffling is invalid because it leaks future information into training. The dataset is partitioned chronologically:
+- **Training Set (80%):** Earliest 27,301 hours (Dec 17, 2006 to Feb 10, 2010).
+- **Held-Out Test Set (20%):** Latest 6,826 hours (Feb 10, 2010 to Nov 26, 2010).
+
+```
+[--------------------- 80% Training Set ---------------------][--- 20% Held-Out Test Set ---]
+2006-12-17                                          2010-02-10                      2010-11-26
+```
+
+---
+
+## 9. Models Evaluated
+
+Three diverse regression architectures were trained and evaluated on the identical chronological partition:
+
+1. **Linear Regression (Baseline):**
+   - Ordinary Least Squares regression assuming linear feature-target relationships.
+   - Serves as the benchmark baseline.
+
+2. **Random Forest Regressor (Bagging Ensemble):**
+   - Ensemble of 100 independent decision trees (`max_depth=16`, `random_state=42`).
+   - Reduces variance and models non-linear interactions across features.
+
+3. **XGBoost Regressor (Gradient Boosting):**
+   - Scalable gradient-boosted decision tree algorithm optimizing pseudo-residuals.
+   - Hyperparameters: `n_estimators=100`, `learning_rate=0.08`, `max_depth=6`, `subsample=0.8`, `colsample_bytree=0.8`.
+
+---
+
+## 10. Model Evaluation
+
+Models were evaluated on the held-out test set using Mean Absolute Error (MAE), Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and Coefficient of Determination ($R^2$):
+
+| Model | MAE (kWh) | MSE ($\text{kWh}^2$) | RMSE (kWh) | $R^2$ Score | Ranking |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **XGBoost Regressor** | **0.3324** | **0.2286** | **0.4781** | **0.5870** | **Best Model (1st)** |
+| **Random Forest Regressor** | 0.3379 | 0.2387 | 0.4886 | 0.5687 | 2nd |
+| **Linear Regression** | 0.3807 | 0.2825 | 0.5315 | 0.4896 | 3rd (Baseline) |
+
+---
+
+## 11. Final Model Selection
+
+**XGBoost was objectively selected as the production forecasting model.**
+
+### Scientific Rationale:
+- **Lowest Prediction Errors:** Achieved the lowest MAE ($0.3324$ kWh) and lowest RMSE ($0.4781$ kWh) on unseen test data.
+- **Highest Explained Variance:** Achieved an $R^2$ of $0.5870$ ($58.7\%$ of variance explained), outperforming Linear Regression by $+9.7\%$ and Random Forest by $+1.8\%$.
+- **Robust Generalization:** Gradient boosting with regularization effectively captured non-linear interactions between hour-of-day and recent lag dynamics without overfitting.
+
+The trained model is persisted in `models/best_energy_model.joblib` alongside schema metadata in `models/model_metadata.json`.
+
+---
+
+## 12. Optimization Engine
+
+The machine learning predictions feed directly into a data-driven energy optimization engine:
+1. **Dynamic Baseline:** Retrieves the historical mean consumption for the target hour and day-type from MySQL (`energy_consumption`).
+2. **Consumption Classification:**
+   - **NORMAL:** Predicted $\le \text{Baseline} + 10\%$
+   - **HIGH:** Predicted between $\text{Baseline} + 10\%$ and $\text{Baseline} + 30\%$
+   - **PEAK:** Predicted $> \text{Baseline} + 30\%$
+3. **Actionable Recommendations:** Suggests load shifting (e.g., washing machine, dryer, water heating) to off-peak periods.
+
+> *Clarification:* Potential savings represent analytical estimates benchmarked against historical smart-meter averages; they are not guaranteed savings.
+
+---
+
+## 13. What-If Scenario Simulation
+
+The What-If module enables hypothetical scenario evaluation:
+- Compares a **Base scenario** against an adjusted **Scenario feature vector**.
+- Users simulate temporal load shifts (e.g., shifting cooking from 7:00 PM to 9:00 PM) or reduced preceding usage.
+- The trained XGBoost model predicts both scenarios and computes difference ($\Delta$), percentage change, and status shifts.
+
+> *Methodological Note:* What-If simulation explores changes in the model's supported forecasting inputs. It does not directly simulate individual physical appliances or guarantee real-world energy savings.
+
+---
+
+## 14. System Architecture
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   React Frontend                       │
+│        (Vite + React 18 + Recharts + Lucide Icons)     │
+└──────────────────────────┬─────────────────────────────┘
+                           │ HTTP REST (CORS Restricted)
+┌──────────────────────────▼─────────────────────────────┐
+│                 FastAPI REST Backend                   │
+│        Endpoints: /predict, /optimize, /what-if        │
+└──────────────┬───────────────────────────┬─────────────┘
+               │                           │
+┌──────────────▼─────────────┐ ┌───────────▼─────────────┐
+│    Trained XGBoost Model   │ │      MySQL Database     │
+│ (models/best_energy_model) │ │  (energy_consumption,   │
+│   Joblib + 8 ML Features   │ │   predictions, metrics) │
+└────────────────────────────┘ └─────────────────────────┘
+```
+
+---
+
+## 15. Technology Stack
+
+- **Machine Learning & Data Science:** Python 3.9+, Scikit-Learn, XGBoost, Pandas, NumPy, Joblib.
+- **Data Exploration & Plotting:** Matplotlib, Seaborn.
+- **Backend Service:** FastAPI, Uvicorn, Pydantic v2.
+- **Relational Database:** MySQL 8.0, PyMySQL.
+- **Interactive Dashboard:** React 18, Vite, Recharts, Lucide React, Vanilla CSS.
+
+---
+
+## 16. Project Structure
 
 ```
 Intelligent-Energy-Consumption-Prediction/
-│
+├── dataset/
+│   ├── raw/
+│   │   ├── README.md                           # Source & download instructions for UCI dataset
+│   │   └── household_power_consumption.txt     # Raw dataset (excluded from git due to 100MB limit)
+│   └── processed/
+│       └── energy_consumption_ml_dataset.csv   # 34,127 hourly ML dataset records
+├── notebooks/
+│   └── ML_Project_Complete_Analysis.ipynb      # Complete 23-section executable ML notebook
+├── models/
+│   ├── best_energy_model.joblib                # Serialized production XGBoost model
+│   ├── feature_names.json                      # Strict 8-feature input schema ordering
+│   └── model_metadata.json                     # Training hyperparameters & test metrics
+├── plots/
+│   ├── actual_vs_predicted.png                 # Test window actual vs predicted chart
+│   ├── model_performance_comparison.png        # Bar charts comparing MAE, RMSE, R²
+│   ├── energy_consumption_over_time.png        # Historical time-series plot
+│   ├── feature_importance_xgboost.png          # XGBoost feature importance
+│   └── feature_importance_random_forest.png    # Random Forest feature importance
+├── src/
+│   ├── preprocess.py                           # Reproducible raw-to-processed pipeline
+│   ├── data_analysis.py                        # EDA and dataset validation
+│   ├── train_models.py                         # Multi-model training and evaluation pipeline
+│   ├── evaluate.py                             # Evaluation metrics calculation
+│   ├── predict.py                              # Standalone prediction module
+│   ├── optimization.py                         # Baseline derivation and load classification
+│   ├── what_if.py                              # What-If scenario comparison engine
+│   └── database.py                             # MySQL schema management and CRUD queries
 ├── api/
 │   ├── __init__.py
-│   ├── schemas.py                              # Pydantic input/output schemas with bounds
-│   └── main.py                                 # FastAPI application with /health & /predict
-│
-├── dataset/
-│   ├── processed/
-│   │   └── energy_consumption_ml_dataset.csv   # 34,127 hourly records (read-only)
-│   └── raw/
-│       └── household_power_consumption.txt     # Raw dataset
-│
-├── models/
-│   ├── best_energy_model.joblib                # Persisted XGBoost model
-│   ├── feature_names.json                      # Strict 8-feature schema & ordering
-│   └── model_metadata.json                     # Training & test evaluation metrics
-│
-├── plots/
-│   ├── actual_vs_predicted.png                 # 7-day test window comparison
-│   ├── model_performance_comparison.png        # Bar chart comparing MAE, RMSE, R²
-│   ├── energy_consumption_over_time.png        # Historical energy trend (2006-2010)
-│   ├── feature_importance_random_forest.png    # Random Forest feature importance
-│   └── feature_importance_xgboost.png          # XGBoost feature importance
-│
-├── src/
-│   ├── __init__.py
-│   ├── data_analysis.py                        # Dataset validation and EDA
-│   ├── evaluate.py                             # Metrics calculation and comparison table
-│   ├── train_models.py                         # Chronological split, model training & evaluation
-│   └── predict.py                              # Inference script with feature alignment
-│
-├── test_api.py                                 # Automated FastAPI test suite (5/5 tests)
+│   ├── main.py                                 # FastAPI application with CORS & endpoints
+│   └── schemas.py                              # Pydantic request/response schemas
+├── database/
+│   └── schema.sql                              # MySQL DDL schema
+├── scripts/
+│   ├── build_notebook.py                       # Automated ML notebook generator & runner
+│   ├── import_dataset_to_mysql.py              # Batch CSV importer into MySQL
+│   ├── test_database.py                        # Database integration tests
+│   ├── test_api.py                             # API endpoint test runner
+│   ├── test_optimization.py                    # Optimization engine tests
+│   └── test_what_if.py                         # What-If simulation test suite
+├── frontend/                                   # React + Vite frontend application
+├── test_api.py                                 # Root API test suite
 ├── requirements.txt                            # Python dependencies
-└── README.md                                   # Documentation & execution instructions
+├── .env.example                                # Template for environment credentials
+├── .gitignore                                  # Git exclusion configuration
+└── README.md                                   # Comprehensive ML documentation
 ```
 
 ---
 
-## Installation & Setup
+## 17. Installation
 
-1. Clone or open the repository.
-2. Install dependencies:
+### 1. Clone the Repository
 ```bash
+git clone https://github.com/mjjaiavinash/Intelligent-Energy-Consumption-Prediction.git
+cd Intelligent-Energy-Consumption-Prediction
+```
+
+### 2. Set Up Python Environment
+```bash
+python -m venv .venv
+# On Windows:
+.venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
----
-
-## Running Phase 1 (ML Pipeline)
-
+### 3. Configure Environment Variables
+Copy `.env.example` to `.env` and set your MySQL credentials:
 ```bash
-# 1. Validate dataset & generate historical energy consumption plot
-python src/data_analysis.py
-
-# 2. Train models, evaluate on chronological test split, and persist best model
-python src/train_models.py
-
-# 3. Test standalone inference module
-python src/predict.py
+cp .env.example .env
+```
+Edit `.env`:
+```ini
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_mysql_password
+MYSQL_DATABASE=energy_prediction
 ```
 
-### Model Benchmark Results:
-
-| Model | MAE (kWh) | MSE | RMSE (kWh) | R² Score |
-| :--- | :---: | :---: | :---: | :---: |
-| Linear Regression | 0.3807 | 0.2825 | 0.5315 | 0.4896 |
-| Random Forest | 0.3379 | 0.2387 | 0.4886 | 0.5687 |
-| **XGBoost (Selected Best)** | **0.3324** | **0.2286** | **0.4781** | **0.5870** |
-
 ---
 
-## Running Phase 2 (FastAPI Backend)
+## 18. Running the Project
 
-### 1. Start the API Server
-Run with Uvicorn:
+### A. Run Reproducible Preprocessing Pipeline
+```bash
+python src/preprocess.py
+```
+
+### B. Explore the Complete ML Notebook
+Open and run `notebooks/ML_Project_Complete_Analysis.ipynb` in VS Code or JupyterLab:
+```bash
+jupyter lab notebooks/ML_Project_Complete_Analysis.ipynb
+```
+
+### C. Start FastAPI Backend Service
 ```bash
 uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-Or directly using Python:
-```bash
-python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
-```
+API Documentation is available at:
+- **Interactive Swagger Docs:** `http://127.0.0.1:8000/docs`
+- **ReDoc Documentation:** `http://127.0.0.1:8000/redoc`
 
-The service will start on `http://127.0.0.1:8000`.
-
-### 2. Interactive Documentation
-- **Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **ReDoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
-
----
-
-## API Endpoints
-
-### 1. Health Check
-- **Endpoint**: `GET /health`
-- **Description**: Verifies that the API service is running and confirms the model is loaded in memory.
-- **Sample Request**:
-```bash
-curl -X GET "http://127.0.0.1:8000/health"
-```
-- **Sample Response**:
-```json
-{
-  "status": "healthy",
-  "model_loaded": true,
-  "model_name": "XGBoost",
-  "features_count": 8,
-  "version": "1.0.0"
-}
-```
-
----
-
-### 2. Feature-Level Energy Prediction Service
-- **Endpoint**: `POST /predict`
-- **Description**: Feature-level prediction service that accepts the 8 operational features (including historical lags and rolling averages) and returns the model's predicted energy consumption in kWh for those given conditions. *(Note: This service accepts input features directly; automated retrieval of historical lag values will be handled by the database/MySQL layer in a subsequent phase).*
-- **Sample Request**:
-```bash
-curl -X POST "http://127.0.0.1:8000/predict" \
-     -H "Content-Type: application/json" \
-     -d '{
-           "hour": 18,
-           "day": 26,
-           "day_of_week": 4,
-           "month": 11,
-           "weekend": 0,
-           "lag_1h_kwh": 2.15,
-           "lag_24h_kwh": 1.95,
-           "rolling_mean_24h_kwh": 1.45
-         }'
-```
-- **Sample Response**:
-```json
-{
-  "predicted_energy_kwh": 2.385,
-  "model_name": "XGBoost",
-  "unit": "kWh",
-  "status": "success"
-}
-```
-
----
-
-## Running Automated Tests
-
-Run the automated test suite to verify model loading, health status, prediction logic, and input schema validation:
-```bash
-python test_api.py
-```
-Outputs:
-- **Test 1**: Verify Model Loading at Startup (`[PASS]`)
-- **Test 2**: GET /health Endpoint (`[PASS]`)
-- **Test 3**: POST /predict with Valid Payload (`[PASS]`)
-- **Test 4**: POST /predict with Out-of-Range Field (`[PASS]`, rejected with HTTP 422)
-- **Test 5**: POST /predict with Missing Required Field (`[PASS]`, rejected with HTTP 422)
-
----
-
-## Phase 3: MySQL Database Integration Guide
-
-Phase 3 integrates MySQL database storage (`energy_prediction`) for storing continuous consumption time series, prediction audits, model metrics, and future optimization logs.
-
-### 1. How to Install MySQL
-- Download and run the official **MySQL Community Server 8.0** and **MySQL Workbench** installer from: [https://dev.mysql.com/downloads/installer/](https://dev.mysql.com/downloads/installer/)
-- During installation, set the root password and ensure the Windows service (e.g. `MySQL80`) is set to start automatically.
-- Ensure the MySQL command-line client is available in PATH (`C:\Program Files\MySQL\MySQL Server 8.0\bin`).
-
-### 2. How to Configure Environment Variables (`.env`)
-1. Duplicate the `.env.example` file to create your local `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Open `.env` and fill in your local MySQL root password:
-   ```env
-   MYSQL_HOST=localhost
-   MYSQL_PORT=3306
-   MYSQL_USER=root
-   MYSQL_PASSWORD=your_actual_mysql_password
-   MYSQL_DATABASE=energy_prediction
-   ```
-   *(Note: `.env` is ignored by version control to keep your credentials safe).*
-
-### 3. How to Create the Database Using `schema.sql`
-You can initialize the schema using either the MySQL command-line client or MySQL Workbench:
-
-**Option A: Using MySQL Command Line**
-```bash
-mysql -u root -p < database/schema.sql
-```
-*(Enter your MySQL password when prompted).*
-
-**Option B: Using MySQL Workbench**
-1. Open MySQL Workbench and connect to your local MySQL connection.
-2. Go to **File -> Open SQL Script...** and select `database/schema.sql`.
-3. Click the **Execute (Lightning bolt)** icon to run the complete script.
-4. Refresh the **Schemas** panel on the left to see the `energy_prediction` database and its 4 tables:
-   - `energy_consumption`
-   - `predictions`
-   - `optimization_results`
-   - `model_metrics`
-
-### 4. How to Test the Database Connection
-Run the automated database test script:
-```bash
-python scripts/test_database.py
-```
-This script validates:
-- Connection to the MySQL server
-- Existence of all 4 required tables
-- Execution of sample `SELECT` count queries
-- Read and write capability for model metrics and predictions
-
-### 5. How to Import the CSV Dataset into MySQL
-Run the batch dataset import script:
-```bash
-python scripts/import_dataset_to_mysql.py
-```
-- Reads the read-only file `dataset/processed/energy_consumption_ml_dataset.csv`.
-- Automatically calls `init_db()` to ensure tables exist.
-- Performs batch inserts in chunks of 1,000 rows.
-- Uses `ON DUPLICATE KEY UPDATE` to safely avoid duplicate timestamp errors.
-- Displays a real-time progress bar, throughput speed, and an import summary report.
-
-### 6. How to Verify Imported Records Using MySQL Workbench
-1. In MySQL Workbench, double-click `energy_prediction` to make it the active database.
-2. In a SQL Query tab, execute:
-   ```sql
-   -- Check total imported row count (expected: 34,127 rows)
-   SELECT COUNT(*) AS total_records FROM energy_consumption;
-
-   -- Inspect the first 10 chronological energy records
-   SELECT * FROM energy_consumption ORDER BY timestamp ASC LIMIT 10;
-
-   -- Inspect the latest records
-   SELECT * FROM energy_consumption ORDER BY timestamp DESC LIMIT 10;
-   ```
-3. Right-click the `energy_consumption` table in the sidebar and select **Table Inspector** to inspect table size, indexes (`idx_timestamp`, `uq_timestamp`), and storage engine (`InnoDB`).
-
----
-
-## Phase 4: Data-Driven Energy Optimization Engine
-
-Phase 4 introduces an explainable, data-driven optimization module that compares forecasted consumption against historical MySQL smart-meter baselines, quantifies potential savings, classifies operational consumption tiers, and persists recommendations.
-
-### Optimization Workflow
-1. **Historical Baseline**: Queries actual records from `energy_consumption` for matching `hour`, `day_of_week`, and `weekend` patterns.
-2. **Excess Calculation**: `excess_consumption = max(predicted_consumption - baseline_consumption, 0.0)`.
-3. **Saving Percentage**: `(excess_consumption / predicted_consumption) * 100` if `predicted > 0` and `excess > 0`.
-4. **Data-Driven Classification**:
-   - `NORMAL`: Consumption is within historical bounds ($P \le B + 0.5 \times \sigma$).
-   - `HIGH`: Moderately elevated consumption ($B + 0.5 \times \sigma < P \le B + 1.5 \times \sigma$).
-   - `PEAK`: Significant consumption peak ($P > B + 1.5 \times \sigma$).
-5. **Actionable Recommendations**: Conservative advice recommending flexible load reductions or shifting during high/peak periods.
-6. **Persistence**: Saves records into `optimization_results` linked via foreign key to `predictions(id)`.
-
-### Running Optimization Tests
-```bash
-python scripts/test_optimization.py
-```
-Validates:
-- Real baseline extraction from MySQL (`34,127` rows)
-- Excess and saving percentage math
-- NORMAL / HIGH / PEAK classifications
-- Recommendation text generation
-- Foreign-key linked insertion into `optimization_results`
-- API `POST /optimize` direct and feature-driven requests
-- Input validation & HTTP 422 error handling
-
-### API Optimization Endpoint
-- **Route**: `POST /optimize`
-- **Sample Request**:
-```bash
-curl -X POST "http://127.0.0.1:8000/optimize" \
-     -H "Content-Type: application/json" \
-     -d '{
-           "predicted_consumption": 2.385,
-           "hour": 18,
-           "day_of_week": 4,
-           "weekend": 0
-         }'
-```
-- **Sample Response**:
-```json
-{
-  "prediction_id": 4,
-  "baseline_consumption": 1.1927,
-  "predicted_consumption": 2.385,
-  "excess_consumption": 1.1923,
-  "potential_saving": 1.1923,
-  "saving_percentage": 49.99,
-  "status": "HIGH",
-  "recommendation": "Moderately elevated energy consumption detected (1.19 kWh above historical baseline). Consider reducing or shifting flexible energy usage during this period (potential saving: 50.0%).",
-  "unit": "kWh"
-}
-```
-
----
-
-## Phase 5: Energy Consumption Web Dashboard
-
-Phase 5 introduces an interactive, responsive web dashboard built with **React**, **Vite**, and **Recharts**, connecting directly to the FastAPI backend:
-
-- **Live MySQL-Backed KPI Cards**: Total records (34,127), historical average consumption, historical peak, latest recorded consumption, average potential savings, and optimization frequency.
-- **Interactive Consumption Trend Chart**: Recharts line chart displaying historical records with dynamic time-range filtering (24h, 7d, 30d), tooltips, and threshold indicators.
-- **Next-Hour Prediction Panel**: Form accepting the 8 XGBoost features, with a "Load Latest from DB" shortcut and instant ML inference display.
-- **Optimization Panel**: Live evaluation of consumption against MySQL baseline, status badges (`NORMAL`, `HIGH`, `PEAK`), and recommendations.
-- **Historical Data Table**: Paginated view of real historical smart-meter records with status indicators.
-
-### Running the Frontend Dashboard
+### D. Start React Frontend Dashboard
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
-Access the dashboard at: `http://localhost:5173`
+Open `http://localhost:5173` in your web browser.
 
 ---
 
-## Phase 6: What-If Energy Consumption Simulation
+## 19. API Endpoints
 
-Phase 6 adds an exploratory **What-If Simulation** engine and interactive dashboard component. Users and grid operators can simulate changes in operating schedules, calendar conditions, or previous-period consumption levels to understand the predicted impact before making real-world operational changes.
+| Method | Endpoint | Description | Sample Request Body |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/health` | Health status, model name, and feature count | None |
+| `POST` | `/predict` | Predict next-hour energy consumption (kWh) | `{"hour": 18, "day": 26, "day_of_week": 4, "month": 11, "weekend": 0, "lag_1h_kwh": 1.65, "lag_24h_kwh": 1.72, "rolling_mean_24h_kwh": 1.15}` |
+| `POST` | `/optimize` | Evaluate consumption against historical baseline | `{"predicted_consumption": 2.85, "hour": 18, "day_of_week": 4, "weekend": 0}` |
+| `POST` | `/what-if` | Run What-If scenario simulation comparison | `{"base_features": {...}, "scenario_features": {...}}` |
+| `GET` | `/energy/summary` | Aggregate historical metrics from MySQL | None |
+| `GET` | `/energy/history` | Retrieve chronological energy history records | None |
 
-### Architectural Principles
-1. **Strict 8-Feature Compatibility**: Uses only the trained XGBoost features (`hour`, `day`, `day_of_week`, `month`, `weekend`, `lag_1h_kwh`, `lag_24h_kwh`, `rolling_mean_24h_kwh`). No synthetic or unmodeled parameters (e.g. temperature or occupancy) are introduced.
-2. **Ephemeral & Exploratory**: What-if simulations are purely analytical and **never written to MySQL**, preventing cluttering of historical prediction logs.
-3. **Transparent & Safe Mathematics**:
-   - $\text{Difference} = \hat{Y}_{\text{scenario}} - \hat{Y}_{\text{base}}$
-   - $\text{Percentage Change} = \frac{\hat{Y}_{\text{scenario}} - \hat{Y}_{\text{base}}}{\hat{Y}_{\text{base}}} \times 100$ (with zero-division safeguard)
-4. **Unified Classification**: Reuses Phase 4 historical baseline calculation and standard deviation tiering (`NORMAL`, `HIGH`, `PEAK`).
-5. **Clear Language**: All interpretation and narrative texts explicitly specify values are *model-predicted exploratory estimates*, not guaranteed outcomes.
+---
 
-### API Endpoint: `POST /what-if`
+## 20. Testing & Verification
 
-#### Sample Request Payload:
-```json
-{
-  "base_features": {
-    "hour": 18,
-    "day": 26,
-    "day_of_week": 4,
-    "month": 11,
-    "weekend": 0,
-    "lag_1h_kwh": 1.6593,
-    "lag_24h_kwh": 1.5735,
-    "rolling_mean_24h_kwh": 1.7259
-  },
-  "scenario_features": {
-    "hour": 19,
-    "day": 26,
-    "day_of_week": 4,
-    "month": 11,
-    "weekend": 0,
-    "lag_1h_kwh": 1.4000,
-    "lag_24h_kwh": 1.5000,
-    "rolling_mean_24h_kwh": 1.6000
-  }
-}
-```
+Run the automated test suites:
 
-#### Sample Response:
-```json
-{
-  "base_prediction_kwh": 2.0051,
-  "scenario_prediction_kwh": 1.7415,
-  "difference_kwh": -0.2636,
-  "percentage_change": -13.15,
-  "base_status": "HIGH",
-  "scenario_status": "NORMAL",
-  "base_baseline_kwh": 1.1927,
-  "scenario_baseline_kwh": 1.5668,
-  "interpretation": "The scenario predicts lower energy consumption by 0.264 kWh (13.15%) compared to the base scenario (2.005 kWh -> 1.742 kWh). The predicted consumption category changes from HIGH (base) to NORMAL (scenario). This is a predicted improvement in the consumption tier. Note: These are model-predicted values - not guaranteed real-world outcomes.",
-  "model_name": "XGBoost",
-  "unit": "kWh"
-}
-```
-
-### Running Phase 6 Verification Tests
 ```bash
-# 1. Run the comprehensive 14-test What-If test suite
-python scripts/test_what_if.py
+# 1. Database Integration Tests
+python scripts/test_database.py
 
-# 2. Run backend regression test suite
+# 2. FastAPI Endpoint Tests (9/9 passed)
 python test_api.py
 
-# 3. Verify health and summary endpoints
-python -c "import requests; print(requests.get('http://localhost:8000/health').json()); print(requests.get('http://localhost:8000/energy/summary').json())"
+# 3. Energy Optimization Engine Tests (10/10 passed)
+python scripts/test_optimization.py
+
+# 4. What-If Simulation Tests (14/14 passed)
+python scripts/test_what_if.py
+
+# 5. Frontend Production Build
+cd frontend && npm run build
 ```
 
+---
 
+## 21. Limitations
 
+1. **Single Household Context:** Dataset observations derive from a single residential smart-meter; cross-building generalization requires transfer learning or retraining.
+2. **Lack of Meteorological Variables:** The historical dataset lacks outdoor temperature, solar radiation, and humidity data, which drive HVAC heating/cooling loads.
+3. **No Direct Device Control:** The platform delivers analytical forecasts and recommendations without physical hardware relay actuation.
+4. **Estimated Savings:** Potential savings represent statistical approximations benchmarked against historical baselines, not guaranteed utility bill savings.
+5. **Feature Scope:** What-If scenario exploration is constrained to the 8 engineered features supported by the trained model.
+
+---
+
+## 22. Future Scope
+
+1. **IoT Smart-Meter Telemetry:** Ingest live meter streams via MQTT or Kafka message brokers.
+2. **Weather API Integration:** Incorporate ambient temperature, humidity, and solar index as exogenous inputs.
+3. **Time-of-Use (ToU) Tariff Optimization:** Optimize electricity cost directly alongside consumption based on dynamic hourly utility pricing.
+4. **Walk-Forward Time-Series Cross-Validation:** Evaluate multi-period rolling window performance across changing years.
+5. **Automated MLOps Pipeline:** Implement MLflow tracking, drift detection, and automated scheduled retraining.
+
+---
+
+## 23. Conclusion
+
+This project demonstrates a rigorous, end-to-end Machine Learning solution for residential energy forecasting and optimization. By engineering temporal and auto-regressive lag features without data leakage, evaluating multiple regression architectures, and objectively selecting XGBoost ($R^2 = 0.587$, $\text{MAE} = 0.3324$ kWh), the system accurately captures demand dynamics. The machine learning foundation powers the FastAPI backend, MySQL database, data-driven optimization engine, What-If simulator, and React dashboard, providing an actionable platform for smart home energy management.

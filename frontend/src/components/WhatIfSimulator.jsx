@@ -258,6 +258,25 @@ export default function WhatIfSimulator({ latestRecord }) {
         </div>
       </div>
 
+      {/* Simulation Disclaimer */}
+      <div style={{
+        marginBottom: '18px',
+        padding: '10px 14px',
+        background: 'rgba(59, 130, 246, 0.08)',
+        border: '1px solid rgba(59, 130, 246, 0.25)',
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        fontSize: '0.82rem',
+        color: '#93c5fd'
+      }}>
+        <Info size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
+        <span>
+          <strong>Note:</strong> What-If simulation explores changes in the model's supported forecasting inputs. It does not directly simulate individual appliances or guarantee real-world energy savings.
+        </span>
+      </div>
+
       {/* Quick scenario presets */}
       <div style={{
         display: 'flex',

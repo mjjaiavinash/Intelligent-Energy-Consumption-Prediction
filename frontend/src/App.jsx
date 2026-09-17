@@ -242,7 +242,7 @@ export default function App() {
           <strong>Intelligent Energy Consumption Prediction & Optimization System</strong> • Phase 5 Dashboard
         </p>
         <p style={{ marginTop: '4px', fontSize: '0.78rem' }}>
-          Backend: FastAPI + XGBoost Regressor • Database: MySQL 8.0 (<span style={{ color: '#34d399' }}>34,127 records</span>) • Frontend: React + Vite + Recharts
+          Backend: FastAPI + XGBoost Regressor • Database: MySQL 8.0 {summary?.total_records ? `(${summary.total_records.toLocaleString()} records)` : ''} • Frontend: React + Vite + Recharts
         </p>
       </footer>
     </div>

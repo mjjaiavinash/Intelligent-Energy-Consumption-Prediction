@@ -38,9 +38,9 @@ export default function PredictionPanel({
         day_of_week: latestRecord.day_of_week ?? 4,
         month: latestRecord.month ?? 11,
         weekend: latestRecord.weekend ? 1 : 0,
-        lag_1h_kwh: parseFloat(latestRecord.lag_1h_kwh) || 1.65,
-        lag_24h_kwh: parseFloat(latestRecord.lag_24h_kwh) || 1.72,
-        rolling_mean_24h_kwh: parseFloat(latestRecord.rolling_mean_24h_kwh) || 1.15
+        lag_1h_kwh: parseFloat(latestRecord.lag_1h_kwh) || 0,
+        lag_24h_kwh: parseFloat(latestRecord.lag_24h_kwh) || 0,
+        rolling_mean_24h_kwh: parseFloat(latestRecord.rolling_mean_24h_kwh) || 0
       });
       setError(null);
     }
@@ -113,6 +113,43 @@ export default function PredictionPanel({
             <span>Load Latest DB Values</span>
           </button>
         )}
+      </div>
+
+      {/* Machine Learning Prediction Info Section */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: '10px',
+        padding: '12px 16px',
+        marginBottom: '18px'
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+          gap: '12px',
+          marginBottom: '8px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          paddingBottom: '8px'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Model</div>
+            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#38bdf8' }}>XGBoost</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Input Features</div>
+            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#ffffff' }}>8</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prediction Unit</div>
+            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#34d399' }}>kWh</div>
+          </div>
+        </div>
+        <div>
+          <span style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)' }}>Prediction Method: </span>
+          <span style={{ fontSize: '0.76rem', color: 'var(--text-dim)' }}>
+            Energy consumption is predicted using an XGBoost regression model trained on historical smart-meter data and temporal/lag-based features.
+          </span>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>

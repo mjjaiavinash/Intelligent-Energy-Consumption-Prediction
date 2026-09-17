@@ -7,7 +7,9 @@ export default function OptimizationPanel({
   predictionContext,
   onOptimizationSuccess
 }) {
-  const [targetPred, setTargetPred] = useState(predictedConsumption || 2.385);
+  const [targetPred, setTargetPred] = useState(
+    predictedConsumption !== undefined && predictedConsumption !== null ? predictedConsumption : ''
+  );
   const [hour, setHour] = useState(predictionContext?.hour ?? 18);
   const [dayOfWeek, setDayOfWeek] = useState(predictionContext?.day_of_week ?? 4);
   const [weekend, setWeekend] = useState(predictionContext?.weekend ?? 0);
@@ -30,6 +32,10 @@ export default function OptimizationPanel({
 
   const handleOptimize = async (e) => {
     if (e) e.preventDefault();
+    if (targetPred === '' || isNaN(parseFloat(targetPred))) {
+      setError('Please provide a valid predicted energy consumption value or run a prediction first.');
+      return;
+    }
     setIsLoading(true);
     setError(null);
 
@@ -137,6 +143,7 @@ export default function OptimizationPanel({
             step="0.001"
             min="0"
             className="input-field"
+            placeholder="Run prediction or enter kWh..."
             value={targetPred}
             onChange={(e) => setTargetPred(e.target.value)}
           />
