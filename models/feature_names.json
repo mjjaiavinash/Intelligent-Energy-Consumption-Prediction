@@ -1,0 +1,10 @@
+[
+    "hour",
+    "day",
+    "day_of_week",
+    "month",
+    "weekend",
+    "lag_1h_kwh",
+    "lag_24h_kwh",
+    "rolling_mean_24h_kwh"
+]

@@ -1,0 +1,56 @@
+{
+    "project": "Intelligent Energy Consumption Prediction and Optimization",
+    "phase": 1,
+    "task": "Next-hour energy consumption forecasting",
+    "best_model_name": "XGBoost",
+    "target_variable": "energy_consumption_kwh",
+    "features": [
+        "hour",
+        "day",
+        "day_of_week",
+        "month",
+        "weekend",
+        "lag_1h_kwh",
+        "lag_24h_kwh",
+        "rolling_mean_24h_kwh"
+    ],
+    "excluded_features": [
+        "avg_reactive_power",
+        "avg_voltage",
+        "avg_global_intensity",
+        "sub_metering_1",
+        "sub_metering_2",
+        "sub_metering_3"
+    ],
+    "rationale_for_exclusion": "Concurrent measurements from the forecast hour are excluded to prevent data leakage in genuine next-hour forecasting.",
+    "test_metrics": {
+        "Model": "XGBoost",
+        "MAE": 0.3324,
+        "MSE": 0.2286,
+        "RMSE": 0.4781,
+        "R2": 0.587
+    },
+    "all_model_metrics": [
+        {
+            "Model": "Linear Regression",
+            "MAE": 0.3807,
+            "MSE": 0.2825,
+            "RMSE": 0.5315,
+            "R2": 0.4896
+        },
+        {
+            "Model": "Random Forest",
+            "MAE": 0.3379,
+            "MSE": 0.2387,
+            "RMSE": 0.4886,
+            "R2": 0.5687
+        },
+        {
+            "Model": "XGBoost",
+            "MAE": 0.3324,
+            "MSE": 0.2286,
+            "RMSE": 0.4781,
+            "R2": 0.587
+        }
+    ]
+}
