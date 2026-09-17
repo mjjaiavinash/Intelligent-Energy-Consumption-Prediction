@@ -247,52 +247,66 @@ The What-If module enables hypothetical scenario evaluation:
 
 ```
 Intelligent-Energy-Consumption-Prediction/
-├── dataset/
-│   ├── raw/
-│   │   ├── README.md                           # Source & download instructions for UCI dataset
-│   │   └── household_power_consumption.txt     # Raw dataset (excluded from git due to 100MB limit)
-│   └── processed/
-│       └── energy_consumption_ml_dataset.csv   # 34,127 hourly ML dataset records
-├── notebooks/
-│   └── ML_Project_Complete_Analysis.ipynb      # Complete 23-section executable ML notebook
-├── models/
-│   ├── best_energy_model.joblib                # Serialized production XGBoost model
-│   ├── feature_names.json                      # Strict 8-feature input schema ordering
-│   └── model_metadata.json                     # Training hyperparameters & test metrics
-├── plots/
-│   ├── actual_vs_predicted.png                 # Test window actual vs predicted chart
-│   ├── model_performance_comparison.png        # Bar charts comparing MAE, RMSE, R²
-│   ├── energy_consumption_over_time.png        # Historical time-series plot
-│   ├── feature_importance_xgboost.png          # XGBoost feature importance
-│   └── feature_importance_random_forest.png    # Random Forest feature importance
-├── src/
-│   ├── preprocess.py                           # Reproducible raw-to-processed pipeline
-│   ├── data_analysis.py                        # EDA and dataset validation
-│   ├── train_models.py                         # Multi-model training and evaluation pipeline
-│   ├── evaluate.py                             # Evaluation metrics calculation
-│   ├── predict.py                              # Standalone prediction module
-│   ├── optimization.py                         # Baseline derivation and load classification
-│   ├── what_if.py                              # What-If scenario comparison engine
-│   └── database.py                             # MySQL schema management and CRUD queries
-├── api/
-│   ├── __init__.py
-│   ├── main.py                                 # FastAPI application with CORS & endpoints
-│   └── schemas.py                              # Pydantic request/response schemas
-├── database/
-│   └── schema.sql                              # MySQL DDL schema
-├── scripts/
-│   ├── build_notebook.py                       # Automated ML notebook generator & runner
-│   ├── import_dataset_to_mysql.py              # Batch CSV importer into MySQL
-│   ├── test_database.py                        # Database integration tests
-│   ├── test_api.py                             # API endpoint test runner
-│   ├── test_optimization.py                    # Optimization engine tests
-│   └── test_what_if.py                         # What-If simulation test suite
-├── frontend/                                   # React + Vite frontend application
-├── test_api.py                                 # Root API test suite
-├── requirements.txt                            # Python dependencies
-├── .env.example                                # Template for environment credentials
-├── .gitignore                                  # Git exclusion configuration
-└── README.md                                   # Comprehensive ML documentation
+│
+├── frontend/                                   # Client-Side Application (React + Vite)
+│   ├── src/
+│   │   ├── components/                         # UI Components (Prediction, Optimization, Charts)
+│   │   ├── services/                           # API Integration Service (api.js)
+│   │   ├── App.jsx                             # Main Application Dashboard
+│   │   └── index.css                           # Modern Design System
+│   ├── public/                                 # Static Assets & Icons
+│   ├── package.json                            # Frontend Dependencies
+│   └── vite.config.js                          # Vite Build Configuration
+│
+├── backend/                                    # Server-Side & ML Application (FastAPI + ML)
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── main.py                             # FastAPI Application with CORS & Endpoints
+│   │   └── schemas.py                          # Pydantic Request/Response Schemas
+│   ├── src/
+│   │   ├── __init__.py
+│   │   ├── preprocess.py                       # Reproducible Raw-to-Processed Pipeline
+│   │   ├── data_analysis.py                    # EDA and Dataset Validation
+│   │   ├── train_models.py                     # Multi-Model Training & Evaluation Pipeline
+│   │   ├── evaluate.py                         # Evaluation Metrics Calculation
+│   │   ├── predict.py                          # Standalone Prediction Module
+│   │   ├── optimization.py                     # Baseline Derivation & Load Classification
+│   │   ├── what_if.py                          # What-If Scenario Comparison Engine
+│   │   └── database.py                         # MySQL Schema Management & Queries
+│   ├── models/
+│   │   ├── best_energy_model.joblib            # Serialized Production XGBoost Model
+│   │   ├── feature_names.json                  # Strict 8-Feature Input Schema Ordering
+│   │   └── model_metadata.json                 # Training Hyperparameters & Test Metrics
+│   ├── dataset/
+│   │   ├── raw/
+│   │   │   └── README.md                       # UCI Dataset Source Instructions
+│   │   └── processed/
+│   │       └── energy_consumption_ml_dataset.csv # 34,127 Hourly ML Records
+│   ├── database/
+│   │   └── schema.sql                          # MySQL Database DDL Schema
+│   ├── scripts/
+│   │   ├── build_notebook.py                   # Automated ML Notebook Generator & Runner
+│   │   ├── import_dataset_to_mysql.py          # Batch CSV Importer into MySQL
+│   │   ├── test_database.py                    # Database Integration Tests
+│   │   ├── test_api.py                         # API Endpoint Test Runner
+│   │   ├── test_optimization.py                # Optimization Engine Tests
+│   │   └── test_what_if.py                     # What-If Simulation Test Suite
+│   ├── test_api.py                             # Backend API Test Suite
+│   ├── requirements.txt                        # Python Dependencies
+│   └── .env.example                            # Template for MySQL Credentials
+│
+├── notebooks/                                  # Academic ML Research & Documentation
+│   └── ML_Project_Complete_Analysis.ipynb      # Complete 23-Section Executable Notebook
+│
+├── plots/                                      # Evaluation & EDA Figures
+│   ├── actual_vs_predicted.png                 # Test Window Actual vs Predicted Chart
+│   ├── model_performance_comparison.png        # Bar Charts Comparing MAE, RMSE, R²
+│   ├── energy_consumption_over_time.png        # Historical Time-Series Plot
+│   ├── feature_importance_xgboost.png          # XGBoost Feature Importance
+│   └── feature_importance_random_forest.png    # Random Forest Feature Importance
+│
+├── .gitignore                                  # Git Exclusion Configuration
+└── README.md                                   # Comprehensive Project Documentation
 ```
 
 ---
@@ -305,8 +319,9 @@ git clone https://github.com/mjjaiavinash/Intelligent-Energy-Consumption-Predict
 cd Intelligent-Energy-Consumption-Prediction
 ```
 
-### 2. Set Up Python Environment
+### 2. Set Up Backend (Python)
 ```bash
+cd backend
 python -m venv .venv
 # On Windows:
 .venv\Scripts\activate
@@ -316,12 +331,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables
-Copy `.env.example` to `.env` and set your MySQL credentials:
+### 3. Configure Backend Environment Variables
+Inside `backend/`, copy `.env.example` to `.env` and set your MySQL credentials:
 ```bash
 cp .env.example .env
 ```
-Edit `.env`:
+Edit `backend/.env`:
 ```ini
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
@@ -330,12 +345,20 @@ MYSQL_PASSWORD=your_mysql_password
 MYSQL_DATABASE=energy_prediction
 ```
 
+### 4. Set Up Frontend (Node / React)
+```bash
+cd ../frontend
+npm install
+```
+
 ---
 
 ## 18. Running the Project
 
 ### A. Run Reproducible Preprocessing Pipeline
+From `backend/`:
 ```bash
+cd backend
 python src/preprocess.py
 ```
 
@@ -346,17 +369,19 @@ jupyter lab notebooks/ML_Project_Complete_Analysis.ipynb
 ```
 
 ### C. Start FastAPI Backend Service
+From `backend/`:
 ```bash
+cd backend
 uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-API Documentation is available at:
-- **Interactive Swagger Docs:** `http://127.0.0.1:8000/docs`
-- **ReDoc Documentation:** `http://127.0.0.1:8000/redoc`
+API Documentation:
+- **Swagger Docs:** `http://127.0.0.1:8000/docs`
+- **ReDoc:** `http://127.0.0.1:8000/redoc`
 
 ### D. Start React Frontend Dashboard
+From `frontend/`:
 ```bash
 cd frontend
-npm install
 npm run dev
 ```
 Open `http://localhost:5173` in your web browser.
@@ -378,9 +403,11 @@ Open `http://localhost:5173` in your web browser.
 
 ## 20. Testing & Verification
 
-Run the automated test suites:
+Run the automated test suites inside `backend/`:
 
 ```bash
+cd backend
+
 # 1. Database Integration Tests
 python scripts/test_database.py
 
@@ -394,7 +421,7 @@ python scripts/test_optimization.py
 python scripts/test_what_if.py
 
 # 5. Frontend Production Build
-cd frontend && npm run build
+cd ../frontend && npm run build
 ```
 
 ---

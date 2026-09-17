@@ -1,10 +1,14 @@
 # Environment and Secret configurations
 .env
 *.env
+**/.env
+**/*.env
 !.env.example
+!**/.env.example
 
 # Python cache & artifacts
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -29,6 +33,7 @@ wheels/
 
 # Logs
 *.log
+**/*.log
 
 # Virtual Environments
 venv/
@@ -39,6 +44,10 @@ ENV/
 # Large Datasets (> 100MB exceeds GitHub hard limit)
 dataset/raw/*.txt
 dataset/raw/*.zip
+backend/dataset/raw/*.txt
+backend/dataset/raw/*.zip
+**/dataset/raw/*.txt
+**/dataset/raw/*.zip
 
 # Node / Frontend
 frontend/node_modules/
@@ -47,7 +56,9 @@ frontend/dist-ssr/
 frontend/*.local
 frontend/.vite/
 node_modules/
+**/node_modules/
 dist/
+**/dist/
 
 # IDE and OS files
 .vscode/

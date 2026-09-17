@@ -14,7 +14,7 @@ import sys
 import nbformat as nbf
 from nbconvert.preprocessors import ExecutePreprocessor
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NOTEBOOK_PATH = os.path.join(BASE_DIR, "notebooks", "ML_Project_Complete_Analysis.ipynb")
 
 def create_notebook():
@@ -119,10 +119,15 @@ We load the verified project dataset (`dataset/processed/energy_consumption_ml_d
     ))
 
     cells.append(nbf.v4.new_code_cell(
-"""DATA_PATH = os.path.join("..", "dataset", "processed", "energy_consumption_ml_dataset.csv")
-if not os.path.exists(DATA_PATH):
-    # Fallback if executed from project root
-    DATA_PATH = os.path.join("dataset", "processed", "energy_consumption_ml_dataset.csv")
+"""candidates = [
+    os.path.join("..", "backend", "dataset", "processed", "energy_consumption_ml_dataset.csv"),
+    os.path.join("backend", "dataset", "processed", "energy_consumption_ml_dataset.csv"),
+    os.path.join("..", "dataset", "processed", "energy_consumption_ml_dataset.csv"),
+    os.path.join("dataset", "processed", "energy_consumption_ml_dataset.csv")
+]
+DATA_PATH = next((p for p in candidates if os.path.exists(p)), None)
+if DATA_PATH is None:
+    raise FileNotFoundError("Could not find energy_consumption_ml_dataset.csv in expected directories.")
 
 df = pd.read_csv(DATA_PATH)
 df['timestamp'] = pd.to_datetime(df['timestamp'])
